@@ -65,6 +65,10 @@ class Packet(object):
             segment_len = min(Packet.MAX_BODY_SEGMENT_LEN,self.body_len,len(data)-14)
             self.body = data[13:(13+segment_len)]
             self.crc = ord(data[13+segment_len])
+            if (self.message_type[0].encode('hex') == '1d'):
+                self.minutes_active = ((ord(data[18]) & 0x0f) << 6) + (ord(data[19]) >> 2)
+                self.reservoir_level = round((float((((ord(data[19]) & 0x03) << 6) + (ord(data[20]) >> 2)))*50)/255, 0)
+
         else:
             self.byte9 = None
             self.body_len = 0
@@ -121,6 +125,10 @@ class Packet(object):
                 if key == "MTYPE":
                     self.message_type = v.decode('hex')
                 if key == "BODY":
+                    self.body = v.decode('hex')
+                if key == "RESERVOIR":
+                    self.body = v.decode('hex')
+                if key == "ACTIVE":
                     self.body = v.decode('hex')
         except ValueError:
             self.body = None
@@ -204,7 +212,21 @@ class Packet(object):
                 self.body.encode('hex'),
                 crc,
             )
-        if self.body != None:
+        if (self.message_type[0].encode('hex') == '1d'):
+            return "ID1:%s PTYPE:%s SEQ:%s ID2:%s B9:%02x BLEN:%s MTYPE:%s BODY:%s MINUTES_ACTIVE:%d RESERVOIR_LEVEL:%du CRC:%02x" % (
+                self.pod_address_1,
+                self.packet_type_str(),
+                self.sequence,
+                self.pod_address_2,
+                self.byte9,
+                self.body_len,
+                self.message_type.encode('hex'),
+                self.body.encode('hex'),
+                self.minutes_active,
+                self.reservoir_level,
+                crc
+            )
+        elif self.body != None:
             # All other packets with enough bytes to have a body
             return "%s ID2:%s B9:%02x BLEN:%s MTYPE:%s BODY:%s CRC:%02x" % (
                 base_str,
@@ -246,6 +268,9 @@ class Packet(object):
                 obj["message_type"] = self.message_type.encode('hex')
             if self.received_at is not None:
                 obj["received_at"] = self.received_at
+            if (self.message_type[0].encode('hex') == '1d'):
+                obj["reservoir"] = self.reservoir_level
+                obj["active"] = self.minutes_active
         else:
             obj = {}
         return obj
