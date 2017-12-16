@@ -5,13 +5,19 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
-from rflib import RfCat, keystop, ChipconUsbTimeoutException
 import time
-import datetime
 import argparse
+import sys
+import getpass
+import json
+from datetime import datetime
+
+from rflib import RfCat, keystop, ChipconUsbTimeoutException
 import openomni.rf
 from openomni.packet import Packet
-import sys
+
+
+       
 
 
 def main(options=None):
@@ -27,34 +33,55 @@ def main(options=None):
 
     d = RfCat(0, debug=False)
     openomni.rf.configure_rfcat(d)
-    json = args.json
 
-    while not keystop():
-        try:
-            pkt, ts = d.RFrecv(timeout=80000)
-            pkt = Packet.flip_bytes(pkt)
-            rcv_time = datetime.datetime.now()
+    # Default variables for filename
+    dateRecording = datetime.today().isoformat()
+    userName = getpass.getuser()
+    fileName = '%s-%s' % (dateRecording, userName)
 
-            x = 0
-            while x < len(pkt):
-                data = pkt[:len(pkt) - (x + 1)]
-                packet = Packet(data)
-                packet.received_at = rcv_time
-                if packet.is_valid():
-                    #print(data.encode("hex"))
-                    if args.raw:
-                        print(packet.data.encode("hex"))
-                    if json:
-                        print(packet.as_json())
-                    else:
-                        print(packet)
-                    break
-                x += 1
 
-        except ChipconUsbTimeoutException:
-            time.sleep(0.5)
+ 
+    #actionDescription = raw_input("Write what you are doing: ")
+    with open('../../results/' + fileName + '.json', 'a') as outFile:
+        """Create 1 dict for each message loop."""
+        package ={}
+        messages = []
+        print ('Start recording:')
+        print ('-------------------------')        
+        print ('Press \'ctrl+c\' to quit and write the performed action')
+        while not keystop():
+            try:
+                pkt, ts = d.RFrecv(timeout=80000)
+                pkt = Packet.flip_bytes(pkt)
+                rcv_time = datetime.now()
+                x = 0
+                while x < len(pkt):
+                    data = pkt[:len(pkt) - (x + 1)]
+                    packet = Packet(data)
+                    packet.received_at = rcv_time
+                    if packet.is_valid():
+                        # print(data.encode("hex"))
+                        if args.raw:
+                            print(packet.data.encode("hex"))
+                            messages.append(packet.data.encode("hex"))
+                        if args.json:
+                            print(packet.as_json())
+                            messages.append(packet.as_json())
+                        else:
+                            print(packet)
+                            messages.append({"string": str(packet), "raw": packet.data.encode("hex")})
+                            package["messages"] = messages
+                        break
+                    x += 1
+            except ChipconUsbTimeoutException:
+                # time.sleep(0.5)
+                action = raw_input('Performed action: ')
+                package["Action"] = action
+                break
+        json.dump(package, outFile, encoding="utf-8", indent=4)
+        # sys.stdin.read(1)
+        print("Stopped recording")
 
-    sys.stdin.read(1)
 
 if __name__ == "__main__":
     main()
