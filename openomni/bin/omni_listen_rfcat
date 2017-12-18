@@ -45,7 +45,8 @@ def main(options=None):
     with open('../../results/' + fileName + '.json', 'a') as outFile:
         """Create 1 dict for each message loop."""
         package ={}
-        messages = []
+        messages = {"string": [], 
+                    "raw": []}
         print ('Start recording:')
         print ('-------------------------')        
         print ('Press \'ctrl+c\' to quit and write the performed action')
@@ -69,7 +70,8 @@ def main(options=None):
                             messages.append(packet.as_json())
                         else:
                             print(packet)
-                            messages.append({"string": str(packet), "raw": packet.data.encode("hex")})
+                            messages["string"].append(str(packet))
+                            messages["raw"].append(packet.data.encode("hex"))
                             package["messages"] = messages
                         break
                     x += 1
