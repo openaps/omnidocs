@@ -54,7 +54,6 @@ def openomni_listen_rfcat(args):
                     else:
                         print(packet)
                         messages["string"].append(str(packet))
-                        print(packet.body)
                         messages["raw"].append(packet.data.encode("hex"))
                         recording["messages"] = messages
                     break
