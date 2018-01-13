@@ -5,8 +5,8 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
-import time
 import argparse
+import os
 import sys
 import getpass
 import json
@@ -17,36 +17,62 @@ import openomni.rf
 from openomni.packet import Packet
 
 
-       
-
-
 def main(options=None):
-
-    parser = argparse.ArgumentParser(description="Capture omnipod packets using rfcat.")
-    parser.add_argument("--json", action="store_true",
+    parser = argparse.ArgumentParser(description="Capture Omnipod packets using rfcat. For a quickstart use this command: omni_listen_rfcat --path results/")
+    parser.add_argument("--path",
+                        type=str,
+                        help="""
+                                Add the path you want to save the resulting json.
+                                --path /Users/MyName/Documents/results/
+                                or --path results/ to save in the current folder.
+                             """,
+                        nargs=1)
+    parser.add_argument("--json",
+                        action="store_true",
                         help="print as json (default: text line)")
-
-    parser.add_argument("--raw", action="store_true",
+    parser.add_argument("--raw",
+                        action="store_true",
                         help="print raw packet")
 
     args = parser.parse_args()
 
-    d = RfCat(0, debug=False)
-    openomni.rf.configure_rfcat(d)
+    # if no argument is used, show help and exit
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
+
+    path = args.path[0]
+
+    # Create path if it does not exists
+    try:
+        os.makedirs(path)
+    except OSError:
+        if not os.path.isdir(path):
+            raise
 
     # Default variables for filename
     recording_datetime = datetime.today().isoformat()
     username = getpass.getuser()
-    filename = '%s-%s' % (recording_datetime, username)
+    filename = "%s-%s" % (recording_datetime, username)
 
-    with open('../../results/' + filename + '.json', 'a') as out_file:
-        """Create 1 dict for each message loop."""
+    with open(path + filename + ".json", "a") as out_file:
+        # setup the RFcat
+        d = RfCat(0, debug=False)
+        openomni.rf.configure_rfcat(d)
+
         package = {}
         messages = {"string": [],
-                    "raw": []}
-        print('Start recording (stops automatically after 10 minutes):')
-        print('-------------------------')
-        print('Press \'ctrl+c\' to quit and write the performed action.')
+                    "raw": []
+                    }
+
+        print("""
+    --------------------------------------------------------
+    Start recording...
+    Press \"ctrl+c\" to quit and write the performed action.
+    --------------------------------------------------------
+    (listening stops automatically after 10 minutes)
+    """)
+
         while not keystop():
             try:
                 pkt, ts = d.RFrecv(timeout=600000)  # 10 minutes timeout
@@ -75,7 +101,7 @@ def main(options=None):
                     x += 1
             except ChipconUsbTimeoutException:
                 # time.sleep(0.5)
-                action = raw_input('Performed action: ')
+                action = raw_input("Performed action: ")
                 package["Action"] = action
                 break
         json.dump(package, out_file, encoding="utf-8", indent=4)
