@@ -47,15 +47,13 @@ def openomni_listen_rfcat(args):
                     # print(data.encode("hex"))
                     if args.raw:
                         print(packet.data.encode("hex"))
-                        messages.append(packet.data.encode("hex"))
                     if args.json:
                         print(packet.as_json())
-                        messages.append(packet.as_json())
                     else:
                         print(packet)
-                        messages["string"].append(str(packet))
-                        messages["raw"].append(packet.data.encode("hex"))
-                        recording["messages"] = messages
+                    messages["string"].append(str(packet))
+                    messages["raw"].append(packet.data.encode("hex"))
+                    recording["messages"] = messages
                     break
                 x += 1
         except ChipconUsbTimeoutException:
