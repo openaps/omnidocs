@@ -35,24 +35,21 @@ def main(options=None):
     openomni.rf.configure_rfcat(d)
 
     # Default variables for filename
-    dateRecording = datetime.today().isoformat()
-    userName = getpass.getuser()
-    fileName = '%s-%s' % (dateRecording, userName)
+    recording_datetime = datetime.today().isoformat()
+    username = getpass.getuser()
+    filename = '%s-%s' % (recording_datetime, username)
 
-
- 
-    #actionDescription = raw_input("Write what you are doing: ")
-    with open('../../results/' + fileName + '.json', 'a') as outFile:
+    with open('../../results/' + filename + '.json', 'a') as out_file:
         """Create 1 dict for each message loop."""
-        package ={}
-        messages = {"string": [], 
+        package = {}
+        messages = {"string": [],
                     "raw": []}
-        print ('Start recording:')
-        print ('-------------------------')        
-        print ('Press \'ctrl+c\' to quit and write the performed action')
+        print('Start recording (stops automatically after 10 minutes):')
+        print('-------------------------')
+        print('Press \'ctrl+c\' to quit and write the performed action.')
         while not keystop():
             try:
-                pkt, ts = d.RFrecv(timeout=80000)
+                pkt, ts = d.RFrecv(timeout=600000)  # 10 minutes timeout
                 pkt = Packet.flip_bytes(pkt)
                 rcv_time = datetime.now()
                 x = 0
@@ -71,6 +68,7 @@ def main(options=None):
                         else:
                             print(packet)
                             messages["string"].append(str(packet))
+                            print(packet.body)
                             messages["raw"].append(packet.data.encode("hex"))
                             package["messages"] = messages
                         break
@@ -80,7 +78,7 @@ def main(options=None):
                 action = raw_input('Performed action: ')
                 package["Action"] = action
                 break
-        json.dump(package, outFile, encoding="utf-8", indent=4)
+        json.dump(package, out_file, encoding="utf-8", indent=4)
         # sys.stdin.read(1)
         print("Stopped recording")
 
