@@ -36,12 +36,15 @@ pip install -e . --process-dependency-links
 ** Note: You may need to add 'sudo' before the pip install line if you are using a system python install.
 
 ## Usage
-You can capture packets by plugging an RFCat into a USB port -- and execute this command:
+You can capture packets by plugging an RFCat into a USB port and execute this command:
 ```
 omni_listen_rfcat --path results/
 ```
 Then issue commands from your PDM and they'll appear at the command line.
-You must specify a path to save the results using --path for example your local documents folder on your mac: /Users/MyName/Documents/results/.
+After completing, close the session with ctrl+c and add a comment explaining what type of actions you have performed.
+
+You must specify a path to save the results using --path.
+For example the documents folder on your mac: /Users/MyName/Documents/results/.
 
 =======
 ##### ** Please note the details below are related to a project created to better understand how the omnipod communicates **
