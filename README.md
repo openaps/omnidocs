@@ -35,13 +35,27 @@ pip install -e . --process-dependency-links
 ```
 ** Note: You may need to add 'sudo' before the pip install line if you are using a system python install.
 
-** Note: You can capture packets by plugging an RFCat into a USB port -- then go to the command line, and navigate to this directory:
-/openomni/bin/  and type:
-
+## Usage
+You can capture packets by plugging an RFCat into a USB port and execute this command:
+```
+cd openomni/bin
 omni_listen_rfcat
-
+```
 Then issue commands from your PDM and they'll appear at the command line.
 
+### saving the captures to a file
+Use the --path option to specify the location to save te captures. ([Example file](results/2017-12-18T03:28:50.720359-eelkejager.json) )
+
+
+In a subfolder within the folder you are currently in:
+```
+omni_listen_rfcat --path results/
+```
+In the documents folder on your mac:
+```
+omni_listen_rfcat --path /Users/MyName/Documents/results/
+```
+After completing the capture, stop the recording with ctrl+c and add a description explaining what type of actions you have performed.
 
 =======
 ##### ** Please note the details below are related to a project created to better understand how the omnipod communicates **

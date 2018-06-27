@@ -5,56 +5,110 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
-from rflib import RfCat, keystop, ChipconUsbTimeoutException
-import time
-import datetime
 import argparse
+import os
+import getpass
+import json
+from datetime import datetime
+
+from rflib import RfCat, keystop, ChipconUsbTimeoutException
 import openomni.rf
 from openomni.packet import Packet
-import sys
 
 
-def main(options=None):
+def openomni_listen_rfcat(args):
 
-    parser = argparse.ArgumentParser(description="Capture omnipod packets using rfcat.")
-    parser.add_argument("--json", action="store_true",
-                        help="print as json (default: text line)")
-
-    parser.add_argument("--raw", action="store_true",
-                        help="print raw packet")
-
-    args = parser.parse_args()
-
+    # setup the RFcat
     d = RfCat(0, debug=False)
     openomni.rf.configure_rfcat(d)
-    json = args.json
+
+    recording = {}
+    messages = {"string": [], "raw": []}
+
+    print("""
+        --------------------------------------------------------
+        Start recording...
+        Press \"ctrl+c\" to quit.
+        --------------------------------------------------------
+        (listening stops automatically after 10 minutes)
+        """)
 
     while not keystop():
         try:
-            pkt, ts = d.RFrecv(timeout=80000)
+            pkt, ts = d.RFrecv(timeout=600000)  # 10 minutes timeout
             pkt = Packet.flip_bytes(pkt)
-            rcv_time = datetime.datetime.now()
-
+            rcv_time = datetime.now()
             x = 0
             while x < len(pkt):
                 data = pkt[:len(pkt) - (x + 1)]
                 packet = Packet(data)
                 packet.received_at = rcv_time
                 if packet.is_valid():
-                    #print(data.encode("hex"))
+                    # print(data.encode("hex"))
                     if args.raw:
                         print(packet.data.encode("hex"))
-                    if json:
+                    if args.json:
                         print(packet.as_json())
                     else:
                         print(packet)
+                    messages["string"].append(str(packet))
+                    messages["raw"].append(packet.data.encode("hex"))
+                    recording["messages"] = messages
                     break
                 x += 1
-
         except ChipconUsbTimeoutException:
-            time.sleep(0.5)
+            print("Stopped recording")
+            break
+    return recording
 
-    sys.stdin.read(1)
+
+def save_recording(recording, args):
+    # Create path if it does not exists
+    path = args.path[0]
+    try:
+        os.makedirs(path)
+    except OSError:
+        if not os.path.isdir(path):
+            raise
+
+    # Default variables for filename
+    recording_datetime = datetime.today().isoformat()
+    username = getpass.getuser()
+    filename = "%s-%s" % (recording_datetime, username)
+    full_path_filename = path + filename + ".json"
+
+    # Add Description field
+    recording["Action"] = raw_input("Describe performed action(s): ")
+
+    with open(full_path_filename, "a") as out_file:
+        json.dump(recording, out_file, encoding="utf-8", indent=4)
+        # sys.stdin.read(1)
+        print("Saved messages to file: %s" % (full_path_filename))
+
+
+def main(options=None):
+    parser = argparse.ArgumentParser(description="Capture Omnipod packets using rfcat. For a quickstart use this command: omni_listen_rfcat --path results/")
+    parser.add_argument("--path",
+                        type=str,
+                        help="""
+                                Add the path you want to save the resulting json.
+                                --path /Users/MyName/Documents/results/
+                                or --path results/ to save in the current folder.
+                             """,
+                        nargs=1)
+    parser.add_argument("--json",
+                        action="store_true",
+                        help="print as json (default: text line)")
+    parser.add_argument("--raw",
+                        action="store_true",
+                        help="print raw packet")
+
+    args = parser.parse_args()
+    recording = openomni_listen_rfcat(args)
+
+    if args.path[0] is not None:
+        save_recording(recording, args)
+
 
 if __name__ == "__main__":
     main()
